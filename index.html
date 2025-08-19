@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Interactive Map of Indian Art & Heritage</title>
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<!-- Leaflet MarkerCluster -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<style>
+    :root{
+    --bg:#0b1220; --panel:#0f172a; --text:#e5e7eb; --muted:#94a3b8; --accent:#38bdf8;
+    --border:#334155;
+    }
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
+    #app{height:100%;position:relative}
+    header{position:absolute;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--border)}
+    header h1{font-size:18px;margin:0;font-weight:600}
+    header .hint{color:var(--muted);font-size:12px}
+    #map{height:100vh;padding-top:56px}
+    .leaflet-popup-content{width:320px !important;max-width:320px !important}
+    .popup-img{width:100%;height:200px;object-fit:cover;border-radius:10px;margin-bottom:12px}
+    .popup-title{font-size:18px;font-weight:600;margin:0 0 6px;color:var(--text)}
+    .popup-meta{color:var(--muted);font-size:14px;margin-bottom:10px}
+    .popup-description{color:var(--text);line-height:1.5;margin-bottom:12px}
+    .popup-link{display:inline-block;background:var(--accent);color:var(--bg);padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:500;font-size:14px}
+    .popup-link:hover{opacity:0.9}
+    a{color:var(--accent)}
+    .popup-title{
+        color: black;
+    }
+    .popup-description{
+        color:gray;
+    }
+</style>
+</head>
+<body>
+<div id="app">
+    <header>
+    <h1>Interactive Map of Indian Art & Heritage</h1>
+    <span class="hint">Click on any marker to explore India's magnificent heritage sites</span>
+    </header>
+    <div id="map"></div>
+</div>
+<script>
+const PLACES = [
+    {name:"Ayodhya Ram Mandir", state:"Uttar Pradesh", type:"Temple", lat:26.7956, lng:82.1943,
+    img:"images/Ayodhya_Ram_Mandir_Inauguration_Day_Picture.jpg",
+    blurb:"Grand newly constructed Ram Mandir dedicated to Lord Ram in Ayodhya.",
+    wiki:null},
+
+    {name:"Chitrakote Falls", state:"Chhattisgarh", type:"Waterfall", lat:18.9800, lng:81.7000,
+    img:"images/chitrakote_falls.jpg",
+    blurb:"Known as the 'Niagara Falls of India', widest waterfall in India.",
+    wiki:null},
+
+    {name:"Dakshineswar Kali Temple", state:"West Bengal", type:"Temple", lat:22.6552, lng:88.3620,
+    img:"images/Dakshineswar.jpg",
+    blurb:"Famous 19th-century temple dedicated to Goddess Kali in Kolkata.",
+    wiki:null},
+
+    {name:"Golden Temple", state:"Punjab", type:"Temple", lat:31.6200, lng:74.8764,
+    img:"images/Golden-Temple-1.jpeg",
+    blurb:"Sacred Sikh gurdwara in Amritsar with gold-plated sanctum and holy sarovar.",
+    wiki:null},
+
+    {name:"Hirakud Dam", state:"Odisha", type:"Dam", lat:21.5000, lng:83.8667,
+    img:"images/hirakud_Dam.jpg",
+    blurb:"One of the longest dams in the world, built across Mahanadi river.",
+    wiki:null},
+
+    {name:"Jagannath Temple, Puri", state:"Odisha", type:"Temple", lat:19.8067, lng:85.8281,
+    img:"images/Jai_Jagganath.jpeg",
+    blurb:"Famous temple of Lord Jagannath, central to the Rath Yatra festival.",
+    wiki:null},
+
+    {name:"Jaisalmer Fort", state:"Rajasthan", type:"Fort", lat:26.9124, lng:70.9126,
+    img:"images/Jaisalmer_Fort_(2)_9552.jpg",
+    blurb:"Golden-hued sandstone fort rising majestically from the Thar Desert.",
+    wiki:null},
+
+    {name:"Madhavaraya Temple, Gandikota", state:"Andhra Pradesh", type:"Temple", lat:14.8155, lng:78.2826,
+    img:"images/Madhavraya_temple,_Gandikota,_India.jpg",
+    blurb:"Magnificent Vijayanagara-style temple in Gandikota fort complex.",
+    wiki:null},
+
+    {name:"Mahakaleshwar Jyotirlinga", state:"Madhya Pradesh", type:"Temple", lat:23.1828, lng:75.7682,
+    img:"images/mahakaleshwar.jpg",
+    blurb:"One of the twelve Jyotirlingas of Shiva, located in Ujjain.",
+    wiki:null},
+
+    {name:"Marine Drive, Mumbai", state:"Maharashtra", type:"Promenade", lat:18.9436, lng:72.8236,
+    img:"images/marine-drive-mumbai-maharashtra-india.jpeg",
+    blurb:"Iconic seaside promenade known as the ‘Queen’s Necklace’ when lit at night.",
+    wiki:null},
+
+    {name:"Nathu La Pass", state:"Sikkim", type:"Mountain Pass", lat:27.3833, lng:88.8300,
+    img:"images/nathu_la.jpeg",
+    blurb:"Strategic mountain pass on Indo-China border, part of ancient Silk Route.",
+    wiki:null},
+
+    {name:"Pangong Tso Lake", state:"Ladakh", type:"Lake", lat:33.7490, lng:78.3510,
+    img:"images/pangong_tso.jpg",
+    blurb:"Beautiful high-altitude lake stretching between India and China.",
+    wiki:null},
+
+    {name:"Salal Dam", state:"Jammu & Kashmir", type:"Dam", lat:33.1450, lng:74.8000,
+    img:"images/Salal_dam.jpg",
+    blurb:"Hydroelectric power project on the Chenab river in Reasi district.",
+    wiki:null},
+
+    {name:"Taj Mahal", state:"Uttar Pradesh", type:"Palace/Tomb", lat:27.1751, lng:78.0421,
+    img:"images/Taj-Mahal.jpg",
+    blurb:"17th-century Mughal mausoleum of Mumtaz Mahal; white marble inlay and charbagh mastery.",
+    wiki:null},
+
+    {name:"Trimbakeshwar Temple", state:"Maharashtra", type:"Temple", lat:19.9322, lng:73.5300,
+    img:"images/trimbakeshwar-jyotirlinga-temple.jpg",
+    blurb:"Ancient Hindu temple dedicated to Lord Shiva, one of the Jyotirlingas.",
+    wiki:null},
+
+    {name:"Warangal Fort", state:"Telangana", type:"Fort", lat:17.9784, lng:79.5941,
+    img:"images/warangal_fort.jpg",
+    blurb:"Historical fort with Kakatiya dynasty's carved gateways and temples.",
+    wiki:null}
+];
+
+// Fetch correct Wikipedia link for a place
+async function fetchWikiUrl(place) {
+    const apiUrl = `https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&titles=${encodeURIComponent(place.name)}&prop=info&inprop=url`;
+    try {
+        const res = await fetch(apiUrl);
+        const data = await res.json();
+        const page = Object.values(data.query.pages)[0];
+        if (page && page.fullurl) {
+            place.wiki = page.fullurl;
+        } else {
+            place.wiki = "https://en.wikipedia.org/wiki/" + encodeURIComponent(place.name);
+        }
+    } catch (e) {
+        console.error("Wiki fetch failed for:", place.name, e);
+        place.wiki = "https://en.wikipedia.org/wiki/" + encodeURIComponent(place.name);
+    }
+}
+
+// Popup HTML
+function createPopupContent(place) {
+    return `
+    <div>
+        <img class="popup-img" src="${place.img}" alt="${place.name}" />
+        <div class="popup-title">${place.name}</div>
+        <div class="popup-meta">${place.state} • ${place.type}</div>
+        <div class="popup-description">${place.blurb}</div>
+        <a href="${place.wiki || '#'}" target="_blank" rel="noopener" class="popup-link">Learn More</a>
+    </div>
+    `;
+}
+
+async function initMap() {
+    await Promise.all(PLACES.map(p => fetchWikiUrl(p)));
+    const map = L.map('map', {zoomControl: true}).setView([20.5937, 78.9629], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    const markers = L.markerClusterGroup({
+        spiderfyOnMaxZoom: false,
+        showCoverageOnHover: false,
+        zoomToBoundsOnClick: false
+    });
+
+    PLACES.forEach((place) => {
+        const marker = L.marker([place.lat, place.lng])
+            .bindPopup(createPopupContent(place), {maxWidth: 320});
+        markers.addLayer(marker);
+    });
+
+    map.addLayer(markers);
+    map.fitBounds(markers.getBounds().pad(0.1));
+}
+initMap();
+</script>
+</body>
+</html>
